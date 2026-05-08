@@ -134,21 +134,4 @@ class SpeedTestRepositoryImpl @Inject constructor() : SpeedTestRepository {
             )
         }
     }
-
-    override suspend fun runBatchTest(
-        cdns: List<Pair<String, String>>,
-        onProgress: (CdnTestProgress) -> Unit,
-        onComplete: (List<TestResult>) -> Unit
-    ) {
-        val results = mutableListOf<TestResult>()
-
-        for ((index, cdn) in cdns.withIndex()) {
-            val result = runSpeedTest(cdn.first, cdn.second) { progress ->
-                onProgress(progress.copy(progress = (index.toFloat() + progress.progress) / cdns.size))
-            }
-            results.add(result)
-        }
-
-        onComplete(results)
-    }
 }

@@ -4,10 +4,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -29,8 +33,10 @@ import com.google.gson.Gson
 import com.rudra.internetspeedtest.ui.dashboard.TestResultUi
 import com.rudra.internetspeedtest.ui.dashboard.DashboardScreen
 import com.rudra.internetspeedtest.ui.history.HistoryScreen
+import com.rudra.internetspeedtest.ui.more.MoreScreen
 import com.rudra.internetspeedtest.ui.result.ResultsScreen
 import com.rudra.internetspeedtest.ui.settings.SettingsScreen
+import com.rudra.internetspeedtest.ui.speedtest.SpeedTestScreen
 
 data class BottomNavItem(
     val label: String,
@@ -41,7 +47,13 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(
-        label = "Dashboard",
+        label = "Speed Test",
+        route = Screen.SpeedTest.route,
+        selectedIcon = Icons.Filled.Speed,
+        unselectedIcon = Icons.Outlined.Speed
+    ),
+    BottomNavItem(
+        label = "CDN Test",
         route = Screen.Dashboard.route,
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
@@ -53,10 +65,10 @@ val bottomNavItems = listOf(
         unselectedIcon = Icons.Outlined.History
     ),
     BottomNavItem(
-        label = "Settings",
-        route = Screen.Settings.route,
-        selectedIcon = Icons.Filled.Settings,
-        unselectedIcon = Icons.Outlined.Settings
+        label = "More",
+        route = Screen.More.route,
+        selectedIcon = Icons.Filled.MoreHoriz,
+        unselectedIcon = Icons.Outlined.MoreHoriz
     )
 )
 
@@ -67,9 +79,10 @@ fun MainNavigation() {
     val currentDestination = navBackStackEntry?.destination
 
     val showBottomBar = currentDestination?.route in listOf(
+        Screen.SpeedTest.route,
         Screen.Dashboard.route,
         Screen.History.route,
-        Screen.Settings.route
+        Screen.More.route
     )
 
     Scaffold(
@@ -104,9 +117,12 @@ fun MainNavigation() {
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Dashboard.route,
+            startDestination = Screen.SpeedTest.route,
             modifier = Modifier.padding(paddingValues)
         ) {
+            composable(Screen.SpeedTest.route) {
+                SpeedTestScreen()
+            }
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
                     onNavigateToResults = { results ->
@@ -117,6 +133,9 @@ fun MainNavigation() {
             }
             composable(Screen.History.route) {
                 HistoryScreen()
+            }
+            composable(Screen.More.route) {
+                MoreScreen(navController)
             }
             composable(Screen.Settings.route) {
                 SettingsScreen()

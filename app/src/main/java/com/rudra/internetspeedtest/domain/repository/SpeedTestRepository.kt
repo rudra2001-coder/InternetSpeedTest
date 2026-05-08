@@ -9,10 +9,4 @@ interface SpeedTestRepository {
         url: String,
         onProgress: (CdnTestProgress) -> Unit
     ): TestResult
-
-    suspend fun runBatchTest(
-        cdns: List<Pair<String, String>>,
-        onProgress: (CdnTestProgress) -> Unit,
-        onComplete: (List<TestResult>) -> Unit
-    )
 }

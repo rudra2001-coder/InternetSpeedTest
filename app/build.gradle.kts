@@ -92,6 +92,9 @@ dependencies {
     // Gson
     implementation(libs.gson)
 
+    // Connectivity
+    implementation("androidx.core:core-ktx:1.13.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
