@@ -26,4 +26,7 @@ interface TestResultDao {
 
     @Query("SELECT * FROM test_results ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getLatestResults(limit: Int): List<TestResultEntity>
+
+    @Query("SELECT * FROM test_results ORDER BY timestamp DESC")
+    suspend fun getAllResultsList(): List<TestResultEntity>
 }

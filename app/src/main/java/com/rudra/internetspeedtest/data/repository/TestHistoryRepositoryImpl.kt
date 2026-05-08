@@ -43,6 +43,16 @@ class TestHistoryRepositoryImpl @Inject constructor(
         return dao.getLatestResults(limit).map { it.toDomain() }
     }
 
+    override suspend fun exportResults(): String {
+        val results = dao.getAllResultsList().map { it.toDomain() }
+        return buildString {
+            appendLine("CDN,Speed (Mbps),TTFB (ms),Download Time (ms),Timestamp,File Size (bytes),Status")
+            results.forEach { result ->
+                appendLine("${result.cdnName},${result.speedMbps},${result.ttfbMs},${result.downloadTimeMs},${result.timestamp},${result.fileSizeBytes},${result.status}")
+            }
+        }
+    }
+
     private fun TestResultEntity.toDomain(): TestResult {
         return TestResult(
             id = id,

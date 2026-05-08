@@ -1,5 +1,7 @@
 package com.rudra.internetspeedtest.ui.settings
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -14,12 +16,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -35,17 +41,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.rudra.internetspeedtest.theme.Primary
 import com.rudra.internetspeedtest.theme.Surface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
     var retryEnabled by remember { mutableStateOf(true) }
     var retryCount by remember { mutableStateOf(3) }
+    var fileSize by remember { mutableStateOf("5 MB") }
     var darkMode by remember { mutableStateOf(true) }
+    var saveHistory by remember { mutableStateOf(true) }
 
     Scaffold(
         topBar = {
@@ -53,7 +66,12 @@ fun SettingsScreen() {
                 title = { Text("Settings") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { viewModel.shareApp() }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share App")
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -91,7 +109,18 @@ fun SettingsScreen() {
                     icon = Icons.Default.Refresh,
                     title = "Retry Count",
                     subtitle = "$retryCount attempts per CDN",
-                    onClick = { /* TODO: Show dialog */ }
+                    onClick = { }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsCard {
+                SettingsItem(
+                    icon = Icons.Default.Storage,
+                    title = "Test File Size",
+                    subtitle = fileSize,
+                    onClick = { }
                 )
             }
 
@@ -113,6 +142,61 @@ fun SettingsScreen() {
                     subtitle = "Use dark theme",
                     checked = darkMode,
                     onCheckedChange = { darkMode = it }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsCard {
+                SettingsSwitchItem(
+                    icon = Icons.Default.Storage,
+                    title = "Save History",
+                    subtitle = "Keep test results locally",
+                    checked = saveHistory,
+                    onCheckedChange = { saveHistory = it }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Data",
+                style = MaterialTheme.typography.titleSmall,
+                color = Primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SettingsCard {
+                SettingsItem(
+                    icon = Icons.Default.Share,
+                    title = "Export History",
+                    subtitle = "Export test results to CSV",
+                    onClick = {
+                        viewModel.exportHistory { csvData ->
+                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/csv"
+                                putExtra(Intent.EXTRA_TEXT, csvData)
+                                putExtra(Intent.EXTRA_SUBJECT, "CDN Benchmark Export")
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, "Export History")
+                            context.startActivity(shareIntent)
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsCard {
+                SettingsItem(
+                    icon = Icons.Default.Clear,
+                    title = "Clear History",
+                    subtitle = "Delete all test results",
+                    onClick = {
+                        viewModel.clearHistory { }
+                    }
                 )
             }
 

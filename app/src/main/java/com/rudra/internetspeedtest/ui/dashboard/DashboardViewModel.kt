@@ -3,6 +3,7 @@ package com.rudra.internetspeedtest.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.internetspeedtest.domain.model.TestStatus
+import com.rudra.internetspeedtest.domain.repository.NetworkInfoRepository
 import com.rudra.internetspeedtest.domain.usecase.GetCdnsUseCase
 import com.rudra.internetspeedtest.domain.usecase.RunBatchTestUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val getCdnsUseCase: GetCdnsUseCase,
-    private val runBatchTestUseCase: RunBatchTestUseCase
+    private val runBatchTestUseCase: RunBatchTestUseCase,
+    private val networkInfoRepository: NetworkInfoRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -24,11 +26,22 @@ class DashboardViewModel @Inject constructor(
 
     init {
         loadCdns()
+        loadNetworkInfo()
     }
 
     private fun loadCdns() {
         val cdns = getCdnsUseCase()
         _uiState.update { it.copy(availableCdns = cdns) }
+    }
+
+    private fun loadNetworkInfo() {
+        _uiState.update {
+            it.copy(
+                networkType = networkInfoRepository.getNetworkType(),
+                carrierName = networkInfoRepository.getCarrierName(),
+                isConnected = networkInfoRepository.isConnected()
+            )
+        }
     }
 
     fun toggleCdnSelection(cdnName: String) {

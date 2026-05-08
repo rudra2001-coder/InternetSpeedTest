@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.rudra.cdnbenchmark"
+    namespace = "com.rudra.internetspeedtest"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1

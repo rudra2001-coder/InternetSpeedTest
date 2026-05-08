@@ -1,9 +1,11 @@
 package com.rudra.internetspeedtest.di
 
 import com.rudra.internetspeedtest.data.repository.CdnRepositoryImpl
+import com.rudra.internetspeedtest.data.repository.NetworkInfoRepositoryImpl
 import com.rudra.internetspeedtest.data.repository.SpeedTestRepositoryImpl
 import com.rudra.internetspeedtest.data.repository.TestHistoryRepositoryImpl
 import com.rudra.internetspeedtest.domain.repository.CdnRepository
+import com.rudra.internetspeedtest.domain.repository.NetworkInfoRepository
 import com.rudra.internetspeedtest.domain.repository.SpeedTestRepository
 import com.rudra.internetspeedtest.domain.repository.TestHistoryRepository
 import dagger.Binds
@@ -27,4 +29,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindTestHistoryRepository(impl: TestHistoryRepositoryImpl): TestHistoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNetworkInfoRepository(impl: NetworkInfoRepositoryImpl): NetworkInfoRepository
 }

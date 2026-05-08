@@ -1,5 +1,7 @@
 package com.rudra.internetspeedtest.ui.result
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
@@ -35,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -59,6 +63,7 @@ fun ResultsScreen(
     results: List<TestResultUi>,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val sortedResults = remember(results) { results.sortedByDescending { it.speedMbps } }
     val fastest = sortedResults.firstOrNull()
 
@@ -72,6 +77,33 @@ fun ResultsScreen(
         }
     }
 
+    val shareText = remember(results) {
+        buildString {
+            appendLine("CDN Benchmark Results")
+            appendLine("====================")
+            appendLine()
+            sortedResults.forEachIndexed { index, result ->
+                appendLine("${index + 1}. ${result.cdnName}")
+                appendLine("   Speed: ${String.format("%.1f", result.speedMbps)} Mbps")
+                appendLine("   TTFB: ${result.ttfbMs} ms")
+                appendLine()
+            }
+            fastest?.let {
+                appendLine("Fastest: ${it.cdnName} (${String.format("%.1f", it.speedMbps)} Mbps)")
+            }
+        }
+    }
+
+    val onShare = {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            putExtra(Intent.EXTRA_SUBJECT, "CDN Benchmark Results")
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "Share Results")
+        context.startActivity(shareIntent)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -79,6 +111,11 @@ fun ResultsScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onShare) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

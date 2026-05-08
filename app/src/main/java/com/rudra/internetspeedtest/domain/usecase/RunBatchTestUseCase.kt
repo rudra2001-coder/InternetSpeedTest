@@ -47,10 +47,12 @@ class RunBatchTestUseCase @Inject constructor(
             val avgSpeed = cdnResults.filter { it.status == TestStatus.SUCCESS }
                 .map { it.speedMbps }
                 .average()
+                .takeIf { !it.isNaN() } ?: 0.0
 
             val avgTtfb = cdnResults.filter { it.status == TestStatus.SUCCESS }
                 .map { it.ttfbMs }
                 .average()
+                .takeIf { !it.isNaN() } ?: 0.0
 
             val avgResult = TestResult(
                 cdnName = cdnName,

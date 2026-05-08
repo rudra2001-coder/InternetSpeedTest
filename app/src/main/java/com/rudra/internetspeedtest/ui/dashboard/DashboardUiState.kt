@@ -9,7 +9,10 @@ data class DashboardUiState(
     val selectedCdns: Set<String> = emptySet(),
     val testProgress: CdnTestProgress? = null,
     val isTestRunning: Boolean = false,
-    val latestResults: List<TestResultUi> = emptyList()
+    val latestResults: List<TestResultUi> = emptyList(),
+    val networkType: String = "Unknown",
+    val carrierName: String = "Unknown",
+    val isConnected: Boolean = false
 )
 
 data class TestResultUi(

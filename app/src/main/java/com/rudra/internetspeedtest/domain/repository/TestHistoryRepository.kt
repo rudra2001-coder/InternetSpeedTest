@@ -10,4 +10,5 @@ interface TestHistoryRepository {
     suspend fun deleteResult(id: Long)
     suspend fun clearAllHistory()
     suspend fun getLatestResults(limit: Int): List<TestResult>
+    suspend fun exportResults(): String
 }
