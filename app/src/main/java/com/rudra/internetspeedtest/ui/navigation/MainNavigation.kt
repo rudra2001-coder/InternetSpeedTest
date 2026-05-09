@@ -43,6 +43,7 @@ import com.rudra.internetspeedtest.ui.more.RealUseTestsScreen
 import com.rudra.internetspeedtest.ui.result.ResultsScreen
 import com.rudra.internetspeedtest.ui.settings.SettingsScreen
 import com.rudra.internetspeedtest.ui.speedtest.SpeedTestScreen
+import com.rudra.internetspeedtest.feature.realitycheck.RealityCheckScreen
 
 data class BottomNavItem(
     val label: String,
@@ -173,6 +174,11 @@ fun MainNavigation() {
             }
             composable(Screen.About.route) {
                 AboutScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.RealityCheck.route) {
+                RealityCheckScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

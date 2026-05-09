@@ -111,6 +111,13 @@ fun MoreScreen(navController: NavController) {
             color = Color(0xFF9C27B0)
         ),
         FeatureItem(
+            title = "Reality Check",
+            description = "Verify ISP speed promise",
+            icon = Icons.Default.Speed,
+            route = "reality-check",
+            color = Color(0xFFF44336)
+        ),
+        FeatureItem(
             title = "Real-World Tests",
             description = "Simulate real usage",
             icon = Icons.Default.PlayArrow,

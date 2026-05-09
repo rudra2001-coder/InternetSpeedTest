@@ -15,4 +15,5 @@ sealed class Screen(val route: String) {
     data object NetworkInfo : Screen("network-info")
     data object ExportData : Screen("export-data")
     data object About : Screen("about")
+    data object RealityCheck : Screen("reality-check")
 }
