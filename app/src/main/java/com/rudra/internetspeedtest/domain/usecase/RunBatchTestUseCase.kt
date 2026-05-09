@@ -5,6 +5,9 @@ import com.rudra.internetspeedtest.domain.model.TestResult
 import com.rudra.internetspeedtest.domain.model.TestStatus
 import com.rudra.internetspeedtest.domain.repository.SpeedTestRepository
 import com.rudra.internetspeedtest.domain.repository.TestHistoryRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 
 class RunBatchTestUseCase @Inject constructor(
@@ -16,61 +19,62 @@ class RunBatchTestUseCase @Inject constructor(
         onProgress: (CdnTestProgress) -> Unit,
         onComplete: (List<TestResult>) -> Unit
     ) {
-        val retryCount = 3
-        val results = mutableListOf<TestResult>()
-
-        for ((cdnName, url) in cdns) {
-            val cdnResults = mutableListOf<TestResult>()
-
-            for (retry in 1..retryCount) {
-                onProgress(
-                    CdnTestProgress(
+        coroutineScope {
+            val deferredResults = cdns.map { (cdnName, url) ->
+                async {
+                    val progress = CdnTestProgress(
                         cdnName = cdnName,
+                        provider = getProviderName(cdnName),
                         progress = 0f,
                         currentSpeed = 0.0,
                         ttfb = 0,
+                        latencyMs = 0,
                         status = TestStatus.RUNNING
                     )
-                )
+                    onProgress(progress)
 
-                val result = speedTestRepository.runSpeedTest(cdnName, url) { progress ->
-                    onProgress(progress.copy(progress = retry.toFloat() / retryCount))
-                }
+                    val startTime = System.currentTimeMillis()
+                    val result = speedTestRepository.runSpeedTest(cdnName, url) { update ->
+                        val updatedProgress = update.copy(
+                            provider = getProviderName(cdnName),
+                            latencyMs = System.currentTimeMillis() - startTime
+                        )
+                        onProgress(updatedProgress)
+                    }
+                    val latencyMs = System.currentTimeMillis() - startTime
 
-                cdnResults.add(result)
-
-                if (result.status == TestStatus.SUCCESS) {
-                    historyRepository.insertResult(result)
+                    val resultWithLatency = result.copy(latencyMs = latencyMs)
+                    historyRepository.insertResult(resultWithLatency)
+                    resultWithLatency
                 }
             }
 
-            val avgSpeed = cdnResults.filter { it.status == TestStatus.SUCCESS }
-                .map { it.speedMbps }
-                .average()
-                .takeIf { !it.isNaN() } ?: 0.0
-
-            val avgTtfb = cdnResults.filter { it.status == TestStatus.SUCCESS }
-                .map { it.ttfbMs }
-                .average()
-                .takeIf { !it.isNaN() } ?: 0.0
-
-            val avgResult = TestResult(
-                cdnName = cdnName,
-                speedMbps = avgSpeed,
-                ttfbMs = avgTtfb.toLong(),
-                downloadTimeMs = cdnResults.firstOrNull()?.downloadTimeMs ?: 0,
-                timestamp = System.currentTimeMillis(),
-                fileSizeBytes = cdnResults.firstOrNull()?.fileSizeBytes ?: 0,
-                status = if (cdnResults.any { it.status == TestStatus.SUCCESS })
-                    TestStatus.SUCCESS
-                else
-                    TestStatus.FAILED
-            )
-
-            results.add(avgResult)
-            historyRepository.insertResult(avgResult)
+            val results = deferredResults.awaitAll()
+            val finalResults = results.map { result ->
+                TestResult(
+                    cdnName = result.cdnName,
+                    speedMbps = result.speedMbps,
+                    ttfbMs = result.ttfbMs,
+                    downloadTimeMs = result.downloadTimeMs,
+                    timestamp = result.timestamp,
+                    fileSizeBytes = result.fileSizeBytes,
+                    status = result.status
+                )
+            }
+            onComplete(finalResults)
         }
+    }
 
-        onComplete(results)
+    private fun getProviderName(cdnName: String): String {
+        return when {
+            cdnName.contains("Cloudflare", ignoreCase = true) -> "Global Edge"
+            cdnName.contains("GitHub", ignoreCase = true) -> "Fastly CDN"
+            cdnName.contains("jsDelivr", ignoreCase = true) -> "Multi-region"
+            cdnName.contains("unpkg", ignoreCase = true) -> "Cloudflare"
+            cdnName.contains("CDNJS", ignoreCase = true) -> "Cloudflare"
+            cdnName.contains("npm", ignoreCase = true) -> "Cloudflare"
+            cdnName.contains("2", ignoreCase = true) && cdnName.contains("Cloudflare", ignoreCase = true) -> "Global Edge #2"
+            else -> "CDN Provider"
+        }
     }
 }

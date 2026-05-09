@@ -1,14 +1,12 @@
 package com.rudra.internetspeedtest.ui.dashboard
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,10 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -28,21 +23,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,24 +47,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.rudra.internetspeedtest.domain.model.CdnInfo
+import com.rudra.internetspeedtest.theme.Error
 import com.rudra.internetspeedtest.theme.Primary
 import com.rudra.internetspeedtest.theme.Success
 import com.rudra.internetspeedtest.theme.Surface
 import com.rudra.internetspeedtest.theme.SurfaceVariant
 import com.rudra.internetspeedtest.theme.Warning
-import com.rudra.internetspeedtest.domain.model.CdnTestProgress
-import com.rudra.internetspeedtest.domain.model.TestStatus
 
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
-    onNavigateToResults: (List<TestResultUi>) -> Unit
+    onNavigateToResults: (List<TestResultUi>, Double, Double, Long, Boolean, String, String, Double, Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -81,106 +73,94 @@ fun DashboardScreen(
     ) {
         HeroSection(
             isTestRunning = uiState.isTestRunning,
-            selectedCount = uiState.selectedCdns.size
+            testedCount = uiState.testedCount,
+            totalCount = uiState.totalCount
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        NetworkInfoCard(
-            networkType = uiState.networkType,
-            carrierName = uiState.carrierName,
-            isConnected = uiState.isConnected
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
+        if (uiState.testComplete && uiState.latestResults.isNotEmpty()) {
+            CdnSummaryCard(
+                avgSpeed = uiState.avgSpeed,
+                medianSpeed = uiState.medianSpeed,
+                latencyMs = uiState.latencyMs,
+                isManipulationDetected = uiState.isManipulationDetected,
+                bestServer = uiState.bestServer,
+                worstServer = uiState.worstServer,
+                speedVariance = uiState.speedVariance
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         if (uiState.latestResults.isNotEmpty()) {
-            StatsOverviewCard(results = uiState.latestResults)
+            CdnResultsTable(
+                results = uiState.latestResults,
+                testComplete = uiState.testComplete
+            )
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Text(
-            text = "Select CDNs",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "${uiState.selectedCdns.size} selected",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row {
-                TextButton(onClick = { viewModel.selectAllCdns() }) {
-                    Text("All")
-                }
-                TextButton(onClick = { viewModel.clearSelection() }) {
-                    Text("Clear")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(vertical = 4.dp)
-        ) {
-            items(uiState.availableCdns) { cdn ->
-                CdnSelectionCard(
-                    cdn = cdn,
-                    isSelected = uiState.selectedCdns.contains(cdn.name),
-                    onClick = { viewModel.toggleCdnSelection(cdn.name) }
+        if (uiState.testComplete) {
+            Button(
+                onClick = {
+                    onNavigateToResults(
+                        uiState.latestResults,
+                        uiState.avgSpeed,
+                        uiState.medianSpeed,
+                        uiState.latencyMs,
+                        uiState.isManipulationDetected,
+                        uiState.bestServer,
+                        uiState.worstServer,
+                        uiState.speedVariance,
+                        uiState.testedCount
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.Speed, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "View Full Results",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        if (uiState.isTestRunning) {
-            TestProgressCard(
-                progress = uiState.testProgress,
-                onCancel = { viewModel.cancelTest() }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { viewModel.runAgain() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Run Again")
+                }
+                Button(
+                    onClick = { viewModel.copyResults() },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Surface)
+                ) {
+                    Text("Copy Results", color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "test complete — ${uiState.testedCount} servers responded",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
             StartTestButton(
-                enabled = uiState.selectedCdns.isNotEmpty(),
+                enabled = uiState.availableCdns.isNotEmpty(),
                 onClick = { viewModel.startTest() }
             )
-        }
-
-        if (uiState.latestResults.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { onNavigateToResults(uiState.latestResults) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Primary.copy(alpha = 0.1f)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Bolt,
-                    contentDescription = null,
-                    tint = Primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "View All Results",
-                    color = Primary
-                )
-            }
         }
     }
 }
@@ -188,13 +168,12 @@ fun DashboardScreen(
 @Composable
 fun HeroSection(
     isTestRunning: Boolean,
-    selectedCount: Int
+    testedCount: Int,
+    totalCount: Int
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(24.dp)
     ) {
         Box(
@@ -202,10 +181,7 @@ fun HeroSection(
                 .fillMaxWidth()
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(
-                            Primary,
-                            Primary.copy(alpha = 0.7f)
-                        )
+                        colors = listOf(Primary, Primary.copy(alpha = 0.7f))
                     ),
                     shape = RoundedCornerShape(24.dp)
                 )
@@ -219,18 +195,25 @@ fun HeroSection(
                 ) {
                     Column {
                         Text(
-                            text = "Speed Test",
+                            text = "CDN Benchmark",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isTestRunning) "Running tests..."
-                                   else "Test your CDN speed",
+                            text = if (isTestRunning) "Testing across $totalCount endpoints..."
+                                   else "Tests across 8 independent endpoints",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.8f)
                         )
+                        if (isTestRunning && totalCount > 0) {
+                            Text(
+                                text = "ISPs can't game all of them at once",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                     Box(
                         modifier = Modifier
@@ -240,238 +223,302 @@ fun HeroSection(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Speed,
+                            imageVector = Icons.Default.Cloud,
                             contentDescription = null,
                             modifier = Modifier.size(36.dp),
                             tint = Color.White
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    StatItem(
-                        value = selectedCount.toString(),
-                        label = "CDNs",
-                        icon = Icons.Default.Bolt
-                    )
-                    StatItem(
-                        value = if (isTestRunning) "..." else "Ready",
-                        label = "Status",
-                        icon = Icons.Default.Star
-                    )
-                }
             }
         }
     }
 }
 
 @Composable
-fun StatItem(
-    value: String,
-    label: String,
-    icon: ImageVector
+fun CdnSummaryCard(
+    avgSpeed: Double,
+    medianSpeed: Double,
+    latencyMs: Long,
+    isManipulationDetected: Boolean,
+    bestServer: String,
+    worstServer: String,
+    speedVariance: Double
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = Color.White.copy(alpha = 0.8f)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f)
-        )
-    }
-}
-
-@Composable
-fun NetworkInfoCard(
-    networkType: String,
-    carrierName: String,
-    isConnected: Boolean
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isConnected) Surface else MaterialTheme.colorScheme.errorContainer
-        ),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isConnected) Primary.copy(alpha = 0.2f)
-                            else MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isConnected) "✓" else "✗",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (isConnected) Primary else MaterialTheme.colorScheme.error
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Network",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = if (isConnected) networkType else "No Connection",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            if (isConnected && carrierName != "Unknown") {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Carrier",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = carrierName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun StatsOverviewCard(results: List<TestResultUi>) {
-    val fastestSpeed = results.maxOfOrNull { it.speedMbps } ?: 0.0
-    val avgSpeed = results.filter { it.speedMbps > 0 }.map { it.speedMbps }.average().takeIf { !it.isNaN() } ?: 0.0
-    val fastestCdn = results.maxByOrNull { it.speedMbps }?.cdnName ?: ""
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "Performance Overview",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                MiniStatCard(
-                    value = String.format("%.1f", fastestSpeed),
-                    label = "Fastest (Mbps)",
-                    color = Success
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = String.format("%.1f", avgSpeed),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Primary
+                    )
+                    Text(
+                        text = "Avg Mbps",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = String.format("%.1f", medianSpeed),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Median Mbps",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "${latencyMs}ms",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Warning
+                    )
+                    Text(
+                        text = "Latency",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        if (isManipulationDetected) Error.copy(alpha = 0.1f)
+                        else Success.copy(alpha = 0.1f)
+                    )
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = if (isManipulationDetected) Icons.Default.Warning else Icons.Default.Check,
+                    contentDescription = null,
+                    tint = if (isManipulationDetected) Error else Success
                 )
-                MiniStatCard(
-                    value = String.format("%.1f", avgSpeed),
-                    label = "Average (Mbps)",
-                    color = Primary
-                )
-                MiniStatCard(
-                    value = results.size.toString(),
-                    label = "Tests",
-                    color = Warning
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isManipulationDetected) "ISP Manipulation Likely" else "No ISP Manipulation Detected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isManipulationDetected) Error else Success
                 )
             }
 
-            if (fastestCdn.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Success.copy(alpha = 0.1f))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Success,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Best CDN",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Success
-                        )
-                    }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
                     Text(
-                        text = fastestCdn,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        text = "Best Server",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = bestServer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = Success
                     )
                 }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Worst Server",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = worstServer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Error
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Speed Variance",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${speedVariance.toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (speedVariance > 100) Warning else MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            if (speedVariance > 100) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "⚠ High variance detected — possible ISP manipulation",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Warning
+                )
+                Text(
+                    text = "Speed ranged widely across servers. This large gap suggests your ISP may be prioritizing certain traffic.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
 }
 
 @Composable
-fun MiniStatCard(
-    value: String,
-    label: String,
-    color: Color
+fun CdnResultsTable(
+    results: List<TestResultUi>,
+    testComplete: Boolean
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = RoundedCornerShape(16.dp)
     ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Endpoint Results",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "endpoint / provider",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(2f)
+                )
+                Text(
+                    text = "speed",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "latency",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "status",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            results.forEach { result ->
+                CdnResultRow(result = result, isFastest = result.isFastest)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun CdnResultRow(
+    result: TestResultUi,
+    isFastest: Boolean
+) {
+    val statusColor = when (result.status) {
+        TestResultStatus.DONE -> Success
+        TestResultStatus.FAILED -> Error
+        TestResultStatus.IN_PROGRESS -> Warning
+    }
+
+    val bgColor = if (isFastest) Success.copy(alpha = 0.1f) else Color.Transparent
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(2f)) {
+            Text(
+                text = result.cdnName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isFastest) FontWeight.Bold else FontWeight.Normal,
+                color = if (isFastest) Success else MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = result.provider,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
-            text = value,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = color
+            text = if (result.speedMbps > 0) String.format("%.1f Mbps", result.speedMbps) else "—",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isFastest) Success else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
         )
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = "${result.latencyMs} ms",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
         )
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (result.status == TestResultStatus.DONE) Icons.Default.Check else Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = statusColor
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (result.status == TestResultStatus.DONE) "done" else if (result.status == TestResultStatus.FAILED) "failed" else "...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = statusColor
+                )
+            }
+        }
     }
 }
 
@@ -499,299 +546,9 @@ fun StartTestButton(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "Start Speed Test",
+            text = "Start CDN Test",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-    }
-}
-
-@Composable
-fun LatestResultsCard(results: List<TestResultUi>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Surface),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Recent Results",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            results.sortedByDescending { it.speedMbps }.forEach { result ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (result.isFastest) Success.copy(alpha = 0.1f)
-                            else SurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (result.isFastest) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = Success,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            text = result.cdnName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (result.isFastest) FontWeight.Bold else FontWeight.Normal,
-                            color = if (result.isFastest) Success else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Text(
-                        text = String.format("%.1f Mbps", result.speedMbps),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (result.isFastest) Success else MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun CdnSelectionCard(
-    cdn: CdnInfo,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .width(100.dp)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Primary.copy(alpha = 0.15f) else Surface
-        ),
-        shape = RoundedCornerShape(16.dp),
-        border = if (isSelected) {
-            androidx.compose.foundation.BorderStroke(2.dp, Primary)
-        } else {
-            androidx.compose.foundation.BorderStroke(1.dp, SurfaceVariant)
-        },
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 4.dp else 1.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isSelected) Primary.copy(alpha = 0.2f)
-                        else SurfaceVariant
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = cdn.logoRes),
-                    contentDescription = cdn.name,
-                    modifier = Modifier.size(28.dp),
-                    tint = if (isSelected) Primary else MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = cdn.name,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isSelected) Primary else Color.Transparent
-                    )
-                    .border(
-                        width = 2.dp,
-                        color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.White
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TestProgressCard(
-    progress: CdnTestProgress?,
-    onCancel: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Surface),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 3.dp,
-                        color = Primary
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Testing in Progress",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            if (progress != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Primary.copy(alpha = 0.1f))
-                        .padding(16.dp)
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = progress.cdnName,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${(progress.progress * 100).toInt()}%",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Primary
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        LinearProgressIndicator(
-                            progress = { progress.progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = Primary,
-                            trackColor = Primary.copy(alpha = 0.2f)
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.Timer,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "${progress.ttfb}ms",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "TTFB",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.Speed,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = Success
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = String.format("%.1f", progress.currentSpeed),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Success
-                                )
-                                Text(
-                                    text = "Mbps",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                Text(
-                    text = "Initializing test...",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onCancel,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = "Cancel Test",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-        }
     }
 }

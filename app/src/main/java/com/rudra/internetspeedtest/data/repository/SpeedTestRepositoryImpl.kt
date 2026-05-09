@@ -26,13 +26,16 @@ class SpeedTestRepositoryImpl @Inject constructor() : SpeedTestRepository {
         url: String,
         onProgress: (CdnTestProgress) -> Unit
     ): TestResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
         try {
             onProgress(
                 CdnTestProgress(
                     cdnName = cdnName,
+                    provider = getProviderName(cdnName),
                     progress = 0f,
                     currentSpeed = 0.0,
                     ttfb = 0,
+                    latencyMs = 0,
                     status = TestStatus.RUNNING
                 )
             )
@@ -41,31 +44,34 @@ class SpeedTestRepositoryImpl @Inject constructor() : SpeedTestRepository {
                 .url(url)
                 .build()
 
-            val startTime = System.nanoTime()
+            val connectionStart = System.currentTimeMillis()
             val response = client.newCall(request).execute()
+            val connectionTime = System.currentTimeMillis() - connectionStart
 
             if (!response.isSuccessful) {
                 return@withContext TestResult(
                     cdnName = cdnName,
+                    provider = getProviderName(cdnName),
                     speedMbps = 0.0,
-                    ttfbMs = 0,
-                    downloadTimeMs = 0,
+                    ttfbMs = connectionTime,
+                    latencyMs = System.currentTimeMillis() - startTime,
+                    downloadTimeMs = connectionTime,
                     timestamp = System.currentTimeMillis(),
                     fileSizeBytes = 0,
                     status = TestStatus.FAILED
                 )
             }
 
-            val firstByteTime = System.nanoTime()
-            val ttfbNs = firstByteTime - startTime
-            val ttfbMs = ttfbNs / 1_000_000
+            val firstByteTime = System.currentTimeMillis() - startTime
 
             onProgress(
                 CdnTestProgress(
                     cdnName = cdnName,
+                    provider = getProviderName(cdnName),
                     progress = 0.3f,
                     currentSpeed = 0.0,
-                    ttfb = ttfbMs,
+                    ttfb = firstByteTime,
+                    latencyMs = connectionTime,
                     status = TestStatus.RUNNING
                 )
             )
@@ -74,9 +80,11 @@ class SpeedTestRepositoryImpl @Inject constructor() : SpeedTestRepository {
             if (body == null) {
                 return@withContext TestResult(
                     cdnName = cdnName,
+                    provider = getProviderName(cdnName),
                     speedMbps = 0.0,
-                    ttfbMs = ttfbMs,
-                    downloadTimeMs = 0,
+                    ttfbMs = firstByteTime,
+                    latencyMs = System.currentTimeMillis() - startTime,
+                    downloadTimeMs = firstByteTime,
                     timestamp = System.currentTimeMillis(),
                     fileSizeBytes = 0,
                     status = TestStatus.FAILED
@@ -86,27 +94,30 @@ class SpeedTestRepositoryImpl @Inject constructor() : SpeedTestRepository {
             val bytes = body.bytes()
             val fileSize = bytes.size.toLong()
 
-            val endTime = System.nanoTime()
-            val totalDurationNs = endTime - startTime
-            val totalDurationMs = totalDurationNs / 1_000_000
-            val totalDurationSec = totalDurationNs / 1_000_000_000.0
+            val endTime = System.currentTimeMillis()
+            val totalDurationMs = endTime - startTime
+            val totalDurationSec = totalDurationMs / 1000.0
 
-            val speedMbps = (fileSize * 8.0) / totalDurationSec / 1_000_000
+            val speedMbps = if (totalDurationSec > 0) (fileSize * 8.0) / totalDurationSec / 1_000_000 else 0.0
 
             onProgress(
                 CdnTestProgress(
                     cdnName = cdnName,
+                    provider = getProviderName(cdnName),
                     progress = 1f,
                     currentSpeed = speedMbps,
-                    ttfb = ttfbMs,
+                    ttfb = firstByteTime,
+                    latencyMs = connectionTime,
                     status = TestStatus.SUCCESS
                 )
             )
 
             TestResult(
                 cdnName = cdnName,
+                provider = getProviderName(cdnName),
                 speedMbps = speedMbps,
-                ttfbMs = ttfbMs,
+                ttfbMs = firstByteTime,
+                latencyMs = System.currentTimeMillis() - startTime,
                 downloadTimeMs = totalDurationMs,
                 timestamp = System.currentTimeMillis(),
                 fileSizeBytes = fileSize,
@@ -116,22 +127,40 @@ class SpeedTestRepositoryImpl @Inject constructor() : SpeedTestRepository {
             onProgress(
                 CdnTestProgress(
                     cdnName = cdnName,
+                    provider = getProviderName(cdnName),
                     progress = 0f,
                     currentSpeed = 0.0,
                     ttfb = 0,
+                    latencyMs = System.currentTimeMillis() - startTime,
                     status = TestStatus.FAILED
                 )
             )
 
             TestResult(
                 cdnName = cdnName,
+                provider = getProviderName(cdnName),
                 speedMbps = 0.0,
                 ttfbMs = 0,
+                latencyMs = System.currentTimeMillis() - startTime,
                 downloadTimeMs = 0,
                 timestamp = System.currentTimeMillis(),
                 fileSizeBytes = 0,
                 status = TestStatus.FAILED
             )
+        }
+    }
+
+    private fun getProviderName(cdnName: String): String {
+        return when {
+            cdnName.contains("Cloudflare", ignoreCase = true) && cdnName.contains("2") -> "Global Edge #2"
+            cdnName.contains("Cloudflare", ignoreCase = true) -> "Global Edge"
+            cdnName.contains("GitHub", ignoreCase = true) -> "Fastly CDN"
+            cdnName.contains("jsDelivr", ignoreCase = true) && cdnName.contains("2") -> "Multi-region #2"
+            cdnName.contains("jsDelivr", ignoreCase = true) -> "Multi-region"
+            cdnName.contains("unpkg", ignoreCase = true) -> "Cloudflare"
+            cdnName.contains("CDNJS", ignoreCase = true) -> "Cloudflare"
+            cdnName.contains("npm", ignoreCase = true) -> "Cloudflare"
+            else -> "CDN Provider"
         }
     }
 }

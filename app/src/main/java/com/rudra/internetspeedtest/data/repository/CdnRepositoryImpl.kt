@@ -12,54 +12,44 @@ class CdnRepositoryImpl @Inject constructor() : CdnRepository {
     override fun getAvailableCdns(): List<CdnInfo> {
         return listOf(
             CdnInfo(
-                name = "Cloudflare",
+                name = "Cloudflare CDN",
                 endpoint = "https://speed.cloudflare.com/__down?bytes=5000000",
                 logoRes = R.drawable.ic_cloudflare
             ),
             CdnInfo(
-                name = "Bunny CDN",
-                endpoint = "https://speedtest.bunnycdn.com/5mb.bin",
-                logoRes = R.drawable.ic_bunny
+                name = "GitHub Assets",
+                endpoint = "https://codeload.github.com/tarballs/test.zip",
+                logoRes = R.drawable.ic_github
             ),
             CdnInfo(
-                name = "CloudFront",
-                endpoint = "https://d1.awsstatic.com/test-assets/5MB.zip",
-                logoRes = R.drawable.ic_cloudfront
+                name = "jsDelivr CDN",
+                endpoint = "https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js",
+                logoRes = R.drawable.ic_jsdelivr
             ),
             CdnInfo(
-                name = "Fastly",
-                endpoint = "https://httpbin.org/stream-bytes/5242880",
-                logoRes = R.drawable.ic_fastly
+                name = "unpkg CDN",
+                endpoint = "https://unpkg.com/react@18/umd/react.production.min.js",
+                logoRes = R.drawable.ic_unpkg
             ),
             CdnInfo(
-                name = "Akamai",
-                endpoint = "https://www.akamai.com/speedtest/5mb.dat",
-                logoRes = R.drawable.ic_akamai
+                name = "CDNJS (Cloudflare)",
+                endpoint = "https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js",
+                logoRes = R.drawable.ic_cdnjs
             ),
             CdnInfo(
-                name = "Azure CDN",
-                endpoint = "https://azurespeedtest.azureedge.net/5mb",
-                logoRes = R.drawable.ic_azure
+                name = "npm Registry",
+                endpoint = "https://registry.npmjs.org/react/-/react-18.2.0.tgz",
+                logoRes = R.drawable.ic_npm
             ),
             CdnInfo(
-                name = "Google Cloud",
-                endpoint = "https://storage.googleapis.com/cloud-storage-test-file/5MB.dat",
-                logoRes = R.drawable.ic_google_cloud
+                name = "Cloudflare (2)",
+                endpoint = "https://cloudflare-releases.com/5mb.bin",
+                logoRes = R.drawable.ic_cloudflare
             ),
             CdnInfo(
-                name = "KeyCDN",
-                endpoint = "https://keycdn-test.example.com/5mb.bin",
-                logoRes = R.drawable.ic_keycdn
-            ),
-            CdnInfo(
-                name = "CDN77",
-                endpoint = "https://httpbin.org/stream-bytes/5242880",
-                logoRes = R.drawable.ic_cdn77
-            ),
-            CdnInfo(
-                name = "StackPath",
-                endpoint = "https://speedtest.stackpath.com/5mb.bin",
-                logoRes = R.drawable.ic_stackpath
+                name = "jsDelivr (2)",
+                endpoint = "https://fastly.jsdelivr.net/gh/lodash/lodash@4.17.21/lodash.min.js",
+                logoRes = R.drawable.ic_jsdelivr
             )
         )
     }

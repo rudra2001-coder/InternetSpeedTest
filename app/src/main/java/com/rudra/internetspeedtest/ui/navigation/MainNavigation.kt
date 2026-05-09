@@ -45,6 +45,18 @@ import com.rudra.internetspeedtest.ui.settings.SettingsScreen
 import com.rudra.internetspeedtest.ui.speedtest.SpeedTestScreen
 import com.rudra.internetspeedtest.feature.realitycheck.RealityCheckScreen
 
+data class ResultsArgs(
+    val results: List<TestResultUi>,
+    val avgSpeed: Double,
+    val medianSpeed: Double,
+    val latencyMs: Long,
+    val isManipulationDetected: Boolean,
+    val bestServer: String,
+    val worstServer: String,
+    val speedVariance: Double,
+    val testedCount: Int
+)
+
 data class BottomNavItem(
     val label: String,
     val route: String,
@@ -132,8 +144,19 @@ fun MainNavigation() {
             }
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
-                    onNavigateToResults = { results ->
-                        val json = Gson().toJson(results)
+                    onNavigateToResults = { results, avgSpeed, medianSpeed, latencyMs, isManipulation, bestServer, worstServer, speedVariance, testedCount ->
+                        val args = ResultsArgs(
+                            results = results,
+                            avgSpeed = avgSpeed,
+                            medianSpeed = medianSpeed,
+                            latencyMs = latencyMs,
+                            isManipulationDetected = isManipulation,
+                            bestServer = bestServer,
+                            worstServer = worstServer,
+                            speedVariance = speedVariance,
+                            testedCount = testedCount
+                        )
+                        val json = Gson().toJson(args)
                         navController.navigate(Screen.Results.createRoute(json))
                     }
                 )
@@ -186,10 +209,18 @@ fun MainNavigation() {
                 route = Screen.Results.route,
                 arguments = listOf(navArgument("resultsJson") { type = NavType.StringType })
             ) { backStackEntry ->
-                val json = backStackEntry.arguments?.getString("resultsJson") ?: "[]"
-                val results = Gson().fromJson(json, Array<TestResultUi>::class.java).toList()
+                val json = backStackEntry.arguments?.getString("resultsJson") ?: "{}"
+                val args = Gson().fromJson(json, ResultsArgs::class.java)
                 ResultsScreen(
-                    results = results,
+                    results = args.results,
+                    avgSpeed = args.avgSpeed,
+                    medianSpeed = args.medianSpeed,
+                    latencyMs = args.latencyMs,
+                    isManipulationDetected = args.isManipulationDetected,
+                    bestServer = args.bestServer,
+                    worstServer = args.worstServer,
+                    speedVariance = args.speedVariance,
+                    testedCount = args.testedCount,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
