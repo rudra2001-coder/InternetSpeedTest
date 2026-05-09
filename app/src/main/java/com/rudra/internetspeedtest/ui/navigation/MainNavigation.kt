@@ -33,7 +33,13 @@ import com.google.gson.Gson
 import com.rudra.internetspeedtest.ui.dashboard.TestResultUi
 import com.rudra.internetspeedtest.ui.dashboard.DashboardScreen
 import com.rudra.internetspeedtest.ui.history.HistoryScreen
+import com.rudra.internetspeedtest.ui.more.AboutScreen
+import com.rudra.internetspeedtest.ui.more.ConnectionHealthScreen
+import com.rudra.internetspeedtest.ui.more.ExportDataScreen
 import com.rudra.internetspeedtest.ui.more.MoreScreen
+import com.rudra.internetspeedtest.ui.more.NetworkInfoScreen
+import com.rudra.internetspeedtest.ui.more.NetworkNeutralityScreen
+import com.rudra.internetspeedtest.ui.more.RealUseTestsScreen
 import com.rudra.internetspeedtest.ui.result.ResultsScreen
 import com.rudra.internetspeedtest.ui.settings.SettingsScreen
 import com.rudra.internetspeedtest.ui.speedtest.SpeedTestScreen
@@ -139,6 +145,36 @@ fun MainNavigation() {
             }
             composable(Screen.Settings.route) {
                 SettingsScreen()
+            }
+            composable(Screen.NetworkInfo.route) {
+                NetworkInfoScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.ConnectionHealth.route) {
+                ConnectionHealthScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.NetworkNeutrality.route) {
+                NetworkNeutralityScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.RealUseTests.route) {
+                RealUseTestsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.ExportData.route) {
+                ExportDataScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.About.route) {
+                AboutScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable(
                 route = Screen.Results.route,

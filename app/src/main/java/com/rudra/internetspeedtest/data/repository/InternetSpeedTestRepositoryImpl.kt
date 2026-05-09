@@ -2,7 +2,7 @@ package com.rudra.internetspeedtest.data.repository
 
 import com.rudra.internetspeedtest.domain.model.SpeedTestProgress
 import com.rudra.internetspeedtest.domain.model.SpeedTestResult
-import com.rudra.internetspeedtest.domain.model.TestPhase
+import com.rudra.internetspeedtest.core.testing.TestPhase
 import com.rudra.internetspeedtest.domain.model.TestStatus
 import com.rudra.internetspeedtest.domain.repository.InternetSpeedTestRepository
 import kotlinx.coroutines.Dispatchers
@@ -51,7 +51,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
 
             onProgress(
                 SpeedTestProgress(
-                    phase = TestPhase.PING,
+                    phase = TestPhase.PreTestPing,
                     progress = 0f,
                     message = "Testing ping to $selectedServer..."
                 )
@@ -63,7 +63,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
             for (i in 1..5) {
                 onProgress(
                     SpeedTestProgress(
-                        phase = TestPhase.PING,
+                        phase = TestPhase.PreTestPing,
                         progress = i / 5f * 0.3f,
                         message = "Ping test $i/5...",
                         pingMs = if (pingResults.isNotEmpty()) pingResults.average() else 0.0,
@@ -90,7 +90,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
 
             onProgress(
                 SpeedTestProgress(
-                    phase = TestPhase.PING,
+                    phase = TestPhase.PreTestPing,
                     progress = 0.3f,
                     message = "Ping: ${String.format("%.1f", pingMs)}ms | Jitter: ${String.format("%.1f", jitterMs)}ms",
                     pingMs = pingMs,
@@ -104,7 +104,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
 
             onProgress(
                 SpeedTestProgress(
-                    phase = TestPhase.DOWNLOAD,
+                    phase = TestPhase.DownloadProgress(0),
                     progress = 0.3f,
                     message = "Starting download test...",
                     pingMs = pingMs,
@@ -116,7 +116,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
             downloadSpeed = runDownloadTest { progress, speed ->
                 onProgress(
                     SpeedTestProgress(
-                        phase = TestPhase.DOWNLOAD,
+                        phase = TestPhase.DownloadProgress((progress * 100).toInt()),
                         progress = 0.3f + (progress * 0.4f),
                         message = "Downloading... ${String.format("%.1f", speed)} Mbps",
                         currentSpeed = speed,
@@ -129,7 +129,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
 
             onProgress(
                 SpeedTestProgress(
-                    phase = TestPhase.DOWNLOAD,
+                    phase = TestPhase.DownloadProgress(100),
                     progress = 0.7f,
                     message = "Download: ${String.format("%.1f", downloadSpeed)} Mbps",
                     currentSpeed = downloadSpeed,
@@ -144,7 +144,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
 
             onProgress(
                 SpeedTestProgress(
-                    phase = TestPhase.UPLOAD,
+                    phase = TestPhase.UploadProgress(0),
                     progress = 0.7f,
                     message = "Starting upload test...",
                     currentSpeed = downloadSpeed,
@@ -157,7 +157,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
             uploadSpeed = runUploadTest { progress, speed ->
                 onProgress(
                     SpeedTestProgress(
-                        phase = TestPhase.UPLOAD,
+                        phase = TestPhase.UploadProgress((progress * 100).toInt()),
                         progress = 0.7f + (progress * 0.3f),
                         message = "Uploading... ${String.format("%.1f", speed)} Mbps",
                         currentSpeed = speed,
@@ -170,7 +170,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
 
             onProgress(
                 SpeedTestProgress(
-                    phase = TestPhase.COMPLETE,
+                    phase = TestPhase.Complete,
                     progress = 1f,
                     message = "Test complete!",
                     currentSpeed = uploadSpeed,
@@ -194,7 +194,7 @@ class InternetSpeedTestRepositoryImpl @Inject constructor() : InternetSpeedTestR
         } catch (e: Exception) {
             onProgress(
                 SpeedTestProgress(
-                    phase = TestPhase.FAILED,
+                    phase = TestPhase.Failed,
                     progress = 0f,
                     message = "Test failed: ${e.message}",
                     status = TestStatus.FAILED

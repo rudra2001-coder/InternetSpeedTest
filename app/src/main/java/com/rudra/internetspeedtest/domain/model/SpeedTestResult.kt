@@ -1,5 +1,11 @@
 package com.rudra.internetspeedtest.domain.model
 
+import com.rudra.internetspeedtest.core.network.ConnectionContext
+import com.rudra.internetspeedtest.core.testing.AggregateTestData
+import com.rudra.internetspeedtest.core.testing.BufferbloatGrade
+import com.rudra.internetspeedtest.core.testing.ConfidenceResult
+import com.rudra.internetspeedtest.core.testing.TestProvenance
+
 data class SpeedTestResult(
     val downloadSpeedMbps: Double = 0.0,
     val uploadSpeedMbps: Double = 0.0,
@@ -17,5 +23,10 @@ data class SpeedTestResult(
     val timestamp: Long = System.currentTimeMillis(),
     val status: TestStatus = TestStatus.IDLE,
     val rawThreadSpeeds: List<Double> = emptyList(),
-    val speedSamples: List<Double> = emptyList()
+    val speedSamples: List<Double> = emptyList(),
+    val connectionContext: ConnectionContext? = null,
+    val testProvenance: TestProvenance? = null,
+    val confidenceResult: ConfidenceResult? = null,
+    val bufferbloatResult: com.rudra.internetspeedtest.core.testing.BufferbloatResult? = null,
+    val aggregateData: AggregateTestData? = null
 )

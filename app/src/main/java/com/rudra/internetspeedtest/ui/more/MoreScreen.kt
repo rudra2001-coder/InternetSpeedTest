@@ -23,11 +23,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -92,8 +93,36 @@ fun MoreScreen(navController: NavController) {
             title = "Network Info",
             description = "Current network details",
             icon = Icons.Default.Wifi,
-            route = "dashboard",
+            route = "network-info",
             color = Success.copy(alpha = 0.8f)
+        ),
+        FeatureItem(
+            title = "Connection Health",
+            description = "Health score & anomalies",
+            icon = Icons.Default.Favorite,
+            route = "connection-health",
+            color = Color(0xFFE91E63)
+        ),
+        FeatureItem(
+            title = "Network Consistency",
+            description = "Neutrality & throttling check",
+            icon = Icons.Default.Extension,
+            route = "network-neutrality",
+            color = Color(0xFF9C27B0)
+        ),
+        FeatureItem(
+            title = "Real-World Tests",
+            description = "Simulate real usage",
+            icon = Icons.Default.PlayArrow,
+            route = "realuse-tests",
+            color = Color(0xFF00BCD4)
+        ),
+        FeatureItem(
+            title = "Export Data",
+            description = "Export or delete test history",
+            icon = Icons.Default.Download,
+            route = "export-data",
+            color = Color(0xFFFF9800)
         ),
         FeatureItem(
             title = "About",
